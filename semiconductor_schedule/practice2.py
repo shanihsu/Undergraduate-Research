@@ -2,6 +2,12 @@ import pandas as pd
 import random
 import numpy as np
 
+class machine(): #answer map
+    def __init__(self): 
+        self.start = []
+        self.end = []
+        self.assignjob = []
+
 def initial(): #random initial gene
     Gene = []
     for i in range(100):
@@ -24,12 +30,33 @@ def findmachine(Gene,dm): #find random gene correspond to machine
         Mommac.append(dm[i][machinenum+1])
     return Mommac
 
-def findMachineTime(Mommac, dt, dm):
+def findMachineTime(Mommac, dt, dm): #find random gene correspond to process time
     Momtime = []
     for i in range(100):
         Momtime.append(dt[i][dm[i].index(Mommac[i])])
-    print(Momtime)
     return Momtime
+
+def createmap(Mommac, Data, Momtime): #find correspond machine from random genes and find start time and end time in each machine
+    Machine = []
+    for i in range(10):
+        Machine.append(machine())
+    for i in range(100):
+        Machine[int(Mommac[i])-1].assignjob.append(i+1)
+        if len(Machine[int(Mommac[i])-1].start) == 0:
+            Machine[int(Mommac[i])-1].start.append(0)
+            Machine[int(Mommac[i])-1].end.append(Momtime[i])
+        else:
+            Machine[int(Mommac[i])-1].start.append(Machine[int(Mommac[i])-1].end[-1])
+            Machine[int(Mommac[i])-1].end.append(Momtime[i]+Machine[int(Mommac[i])-1].start[-1])
+    return Machine
+
+def orderjob(Machine): #order job from random gene to correspond machine by rules
+    for i in range(10):
+        for j in range(len(Machine[i].assignjob)):
+            if 
+
+    
+    
 
 if __name__ == '__main__':
     data = pd.read_excel('data.xlsx',sheet_name= [0,1,2,3])
@@ -39,7 +66,6 @@ if __name__ == '__main__':
     for i in range(100):
         datamachine.append(data[0].values[i][9].split("EQP"))
         datamachine[i][0] = len(datamachine[i])-1
-    #print(datamachine)
     
     #create CANRUN_process time
     datatime = []
@@ -48,11 +74,18 @@ if __name__ == '__main__':
         datatime[i][0] = len(datatime[i])-1
     for i in range(100):
         for j in range(1, len(datatime[i])):
-            datatime[i][j] = data[1].values[10*(int(datamachine[i][j])-1) + int(data[0].values[i][8][1])-1][2] * int(data[0].values[i][3])/25
-    #print(datatime)
+            if int(data[0].values[i][8][1]) != 0:
+                datatime[i][j] = data[1].values[10*(int(datamachine[i][j])-1) + int(data[0].values[i][8][1])-1][2] * int(data[0].values[i][3])/25
+            else:
+                datatime[i][j] = data[1].values[10*(int(datamachine[i][j])-1) + int(data[0].values[i][8][1])-1+10][2] * int(data[0].values[i][3])/25
 
     gene = initial()
     mommac = findmachine(gene, datamachine)
     momtime = findMachineTime(mommac, datatime, datamachine)
-    print(gene)
-    print(mommac)
+    Mach = createmap(mommac, data, momtime)
+    for i in range(10):    
+        print(Mach[i].assignjob)
+        print(Mach[i].start)
+        print(Mach[i].end)
+    #print(gene)
+    #print(mommac)
