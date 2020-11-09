@@ -1,6 +1,7 @@
 import pandas as pd
 import random
 import numpy as np
+import matplotlib.pyplot as plt # import matplotlib相關套件
 
 class machine(): #answer map
     def __init__(self): 
@@ -36,24 +37,26 @@ def findMachineTime(Mommac, dt, dm): #find random gene correspond to process tim
         Momtime.append(dt[i][dm[i].index(Mommac[i])])
     return Momtime
 
-def createmap(Mommac, Data, Momtime): #find correspond machine from random genes and find start time and end time in each machine
+def createmap(Mommac, Data, Momtime): #find correspond machine from random genes ,find start time and end time in each machine, and add setup_time file and Tool file as condition
     Machine = []
     for i in range(10):
         Machine.append(machine())
     for i in range(100):
-        Machine[int(Mommac[i])-1].assignjob.append(i+1)
         if len(Machine[int(Mommac[i])-1].start) == 0:
-            Machine[int(Mommac[i])-1].start.append(0)
-            Machine[int(Mommac[i])-1].end.append(Momtime[i])
+            Machine[int(Mommac[i])-1].assignjob.append(i+1)
+            Machine[int(Mommac[i])-1].start.append(Data[3].values[int(Mommac[i])-1][2])
+            Machine[int(Mommac[i])-1].end.append(Momtime[i]+Machine[int(Mommac[i])-1].start[0])
         else:
-            Machine[int(Mommac[i])-1].start.append(Machine[int(Mommac[i])-1].end[-1])
+            tmp = Machine[int(Mommac[i])-1].assignjob[-1]
+            Machine[int(Mommac[i])-1].assignjob.append(i+1)
+            Machine[int(Mommac[i])-1].start.append(Machine[int(Mommac[i])-1].end[-1] + Data[2].values[tmp-1][Machine[int(Mommac[i])-1].assignjob[-1]])
             Machine[int(Mommac[i])-1].end.append(Momtime[i]+Machine[int(Mommac[i])-1].start[-1])
     return Machine
 
-def orderjob(Machine): #order job from random gene to correspond machine by rules
-    for i in range(10):
-        for j in range(len(Machine[i].assignjob)):
-            if 
+# def orderjob(Machine): #order job from random gene to correspond machine by rules
+#     for i in range(10):
+#         for j in range(len(Machine[i].assignjob)):
+#             if 
 
     
     
@@ -89,3 +92,12 @@ if __name__ == '__main__':
         print(Mach[i].end)
     #print(gene)
     #print(mommac)
+
+    #draw
+    #draw barh
+    for i in range(10):
+        for j in range(len(Mach[i].assignjob)):
+            plt.barh(i,Mach[i].end[j]-Mach[i].start[j],left=Mach[i].start[j])
+            plt.text(Mach[i].start[j]+(Mach[i].end[j]-Mach[i].start[j])/4,i,'J%s'%(Mach[i].assignjob[j]),color="white")
+    plt.yticks(np.arange(10),np.arange(1,11))
+    plt.show()
