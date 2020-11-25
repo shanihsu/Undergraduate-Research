@@ -8,6 +8,16 @@ class machine(): #answer map
         self.start = []
         self.end = []
         self.assignjob = []
+        self.urgent = []
+    def __repr__(self):
+        return repr((self.start, self.end, self.assignjob, self.urgent))
+
+class jobdata: #some data in xlsx[0]
+    def __init__(self, assignjob, urgent):
+        self.assignjob = assignjob
+        self.urgent = urgent
+    def __repr__(self):
+        return repr((self.assignjob, self.urgent))
 
 def initial(): #random initial gene
     Gene = []
@@ -37,7 +47,7 @@ def findMachineTime(Mommac, dt, dm): #find random gene correspond to process tim
         Momtime.append(dt[i][dm[i].index(Mommac[i])])
     return Momtime
 
-def createmap(Mommac, Data, Momtime): #find correspond machine from random genes ,find start time and end time in each machine, and add setup_time file and Tool file as condition
+def createmap(Mommac, Data, Momtime): #find 10 machine which correpond to random genes ,find start time and end time in each machine, and add setup_time file and Tool file as condition
     Machine = []
     for i in range(10):
         Machine.append(machine())
@@ -53,10 +63,36 @@ def createmap(Mommac, Data, Momtime): #find correspond machine from random genes
             Machine[int(Mommac[i])-1].end.append(Momtime[i]+Machine[int(Mommac[i])-1].start[-1])
     return Machine
 
-# def orderjob(Machine): #order job from random gene to correspond machine by rules
-#     for i in range(10):
-#         for j in range(len(Machine[i].assignjob)):
-#             if 
+def orderjob(Machine, Data, dt, dm): #order job from random gene to correspond machine by rules
+    machtmp = []
+    for i in range(10):
+        machtmp.append(machine())
+    #sort jobs in each machine by urgent
+    for i in range(10):
+        tmp = []
+        for j in range(len(Machine[i].assignjob)):
+            Machine[i].urgent.append(Data[0].values[Machine[i].assignjob[j]-1][7])
+            tmp.append(jobdata(Machine[i].assignjob[j], Machine[i].urgent[j]))
+        tmp = sorted(tmp, key=lambda jobdata: jobdata.urgent, reverse=True)
+    #assign sorted result to map
+        for j in range(len(Machine[i].assignjob)):
+            if len(machtmp[i].start) == 0:
+                machtmp[i].assignjob.append(tmp[j].assignjob)
+                machtmp[i].start.append(Data[3].values[i][2])
+                t = np.array(dm[tmp[j].assignjob-1])
+                d = t.astype(int).tolist()
+                machtmp[i].end.append(machtmp[i].start[0] + dt[tmp[j].assignjob-1][d.index(i+1)])
+            else:
+                temp = machtmp[i].assignjob[-1]
+                machtmp[i].assignjob.append(tmp[j].assignjob)
+                machtmp[i].start.append(machtmp[i].end[-1] + Data[2].values[temp-1][machtmp[i].assignjob[-1]])
+                t = np.array(dm[tmp[j].assignjob-1])
+                d = t.astype(int).tolist()
+                machtmp[i].end.append(machtmp[i].start[-1] + dt[tmp[j].assignjob-1][d.index(i+1)])
+    return machtmp            
+
+
+    
 
     
     
@@ -86,18 +122,20 @@ if __name__ == '__main__':
     mommac = findmachine(gene, datamachine)
     momtime = findMachineTime(mommac, datatime, datamachine)
     Mach = createmap(mommac, data, momtime)
-    for i in range(10):    
-        print(Mach[i].assignjob)
-        print(Mach[i].start)
-        print(Mach[i].end)
+    Mach = orderjob(Mach, data, datatime, datamachine)
+    # for i in range(10):    
+    #     print(Mach[i].assignjob)
+    #     print(Mach[i].start)
+    #     print(Mach[i].end)
     #print(gene)
     #print(mommac)
 
     #draw
     #draw barh
+    color_barh = ['r','g','b','c','m','y','navy','coral', 'brown', 'orange']
     for i in range(10):
-        for j in range(len(Mach[i].assignjob)):
-            plt.barh(i,Mach[i].end[j]-Mach[i].start[j],left=Mach[i].start[j])
-            plt.text(Mach[i].start[j]+(Mach[i].end[j]-Mach[i].start[j])/4,i,'J%s'%(Mach[i].assignjob[j]),color="white")
+        for j in range(len(Mach[i].assignjob)): 
+            plt.barh(i,Mach[i].end[j]-Mach[i].start[j],left=Mach[i].start[j], color = color_barh[int(data[0].values[Mach[i].assignjob[j]-1][8][1])])
+            plt.text(Mach[i].start[j]+(Mach[i].end[j]-Mach[i].start[j])/4,i,'%s'%(Mach[i].assignjob[j]),color="white")
     plt.yticks(np.arange(10),np.arange(1,11))
     plt.show()
