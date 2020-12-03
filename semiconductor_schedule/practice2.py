@@ -30,13 +30,15 @@ class selectdata: #data of 50 genemom and 50 geneson
         return repr((self.genenum, self.time))
 
 class answer:
-    def __init__(self, genedata, mach, gene, geneson):
+    def __init__(self, genedata, mach, gene, geneson, sortgene, sortgeneson):
         self.genedata = genedata
         self.mach = mach
         self.gene = gene
         self.geneson = geneson
+        self.sortgene = sortgene
+        self.sortgeneson = sortgeneson
     def __repr__(self):
-        return repr((self.genedata, self.mach, self.gene, self.geneson))
+        return repr((self.genedata, self.mach, self.gene, self.geneson, self.sortgene, self.sortgeneson))
 
 def initial(): #random initial gene
     Gene = [[0]*100 for i in range(50)]
@@ -112,6 +114,51 @@ def orderjob(Machine, Data, dt, dm): #order job from random gene to correspond m
                 machtmp[i].end.append(machtmp[i].start[-1] + dt[tmp[j].assignjob-1][d.index(i+1)])
     return machtmp            
 
+def randomorder(Sortgene, Machine, Data, k, dt, dm): #order gene from random sort number 0~1  
+    machtmp = []
+    for i in range(10):
+        machtmp.append(machine())
+    #sort jobs in each machine by sortgene
+    for i in range(10):
+        tmp = []
+        erasetmp = []
+        for j in range(len(Machine[i].assignjob)):
+            erasetmp.append(0)
+            Machine[i].urgent.append(Sortgene[k][Machine[i].assignjob[j]-1])# urgent here means sortgene
+            tmp.append(jobdata(Machine[i].assignjob[j], Machine[i].urgent[j]))
+        tmp = sorted(tmp, key=lambda jobdata: jobdata.urgent, reverse=True)
+        if i == 0:
+            print(tmp[0])
+        #modify genes by arrival time
+        for j in range(len(Machine[i].assignjob)):
+            if int(Data[0].values[Machine[i].assignjob[j]-1][4]) == 999:
+                tmp.append(jobdata(Machine[i].assignjob[j], Machine[i].urgent[j]))
+                erasetmp[j] = -1
+        #print(tmp)
+        for j in range(len(Machine[i].assignjob)-1, -1, -1):
+            if erasetmp[j] == -1:
+                del tmp[j]
+        if i == 0:
+            print("a", tmp[0])
+        #print(tmp)
+        #assign sorted result to map
+        for j in range(len(Machine[i].assignjob)):
+            if len(machtmp[i].start) == 0:
+                machtmp[i].assignjob.append(tmp[j].assignjob)
+                machtmp[i].start.append(Data[3].values[i][2])
+                t = np.array(dm[tmp[j].assignjob-1])
+                d = t.astype(int).tolist()
+                machtmp[i].end.append(machtmp[i].start[0] + dt[tmp[j].assignjob-1][d.index(i+1)])
+            else:
+                temp = machtmp[i].assignjob[-1]
+                machtmp[i].assignjob.append(tmp[j].assignjob)
+                machtmp[i].start.append(machtmp[i].end[-1] + Data[2].values[temp-1][machtmp[i].assignjob[-1]])
+                t = np.array(dm[tmp[j].assignjob-1])
+                d = t.astype(int).tolist()
+                machtmp[i].end.append(machtmp[i].start[-1] + dt[tmp[j].assignjob-1][d.index(i+1)])
+    return machtmp            
+    
+
 def mating(mtnum, genemom): #mate gene and generate two sons once
     geneson = [[0]*100 for i in range(50)]
     for num in range(int(mtnum)):
@@ -161,32 +208,47 @@ def findtime(map): #find max time in 10 machine
                 maptime = map[i].end[-1]
     return maptime        
     
-def select(Genedata, Gene, Geneson): # select 50 gene as mom and return it
+def select(Genedata, Gene, Geneson, Sortgene, Sortgeneson): # select 50 gene as mom and return it
     #Genedata = sorted(Genedata, key=lambda selectdata: selectdata.time)
-    newgene = [[0]*100 for i in range(50)]
+    newgene = [[0]*200 for i in range(50)]
     for i in range(10):
         if Genedata[i].genenum < 50:
             for j in range(100):
                 newgene[i][j] = Gene[Genedata[i].genenum][j]
+            for j in range(100, 200):
+                newgene[i][j] = Sortgene[Genedata[i].genenum][j-100]
         elif Genedata[i].genenum >= 50:
             for j in range(100):
                 newgene[i][j] = Geneson[Genedata[i].genenum-50][j]
+            for j in range(100, 200):
+                newgene[i][j] = Sortgeneson[Genedata[i].genenum-50][j-100]    
     for i in range(10,50):
         rd = random.randint(10,99)
         if Genedata[rd].genenum < 50:
             for j in range(100):
                 newgene[i][j] = Gene[Genedata[rd].genenum][j]
+            for j in range(100, 200):
+                newgene[i][j] = Sortgene[Genedata[rd].genenum][j-100]
         elif Genedata[rd].genenum >= 50:
             for j in range(100):
                 newgene[i][j] = Geneson[Genedata[rd].genenum-50][j]
+            for j in range(100, 200):
+                newgene[i][j] = Sortgeneson[Genedata[rd].genenum-50][j-100]
     return newgene
     
-def geneAlgorithm(genedata, Gene, Geneson, datamachine, datatime, mate, motate):  
-    gene = select(genedata, Gene, Geneson)
+def geneAlgorithm(genedata, Gene, Geneson, datamachine, datatime, mate, motate, Sortgene, Sortgeneson):  
+    genetmp = select(genedata, Gene, Geneson, Sortgene, Sortgeneson)
+    for i in range(50):
+        for j in range(100):
+            gene[i][j] = genetmp[i][j]
+        for j in range(100, 200):
+            sortgene[i][j-100] = genetmp[i][j]
     matenum = 50 * mate / 2
     motatenum = 50 * motate
     sontmp = mating(matenum, gene)
     geneson = motation(sontmp, 50*mate, gene)
+    sortsontmp = mating(matenum, sortgene) #sort gene
+    sortgeneson = motation(sortsontmp, 50*mate, sortgene) #sotr gene
 
     mommac = findmachine(gene, datamachine)
     momtime = findMachineTime(mommac, datatime, datamachine)
@@ -198,17 +260,19 @@ def geneAlgorithm(genedata, Gene, Geneson, datamachine, datatime, mate, motate):
     genedata = []
     for i in range(50):
         Machtmp = createmap(mommac[i], data, momtime[i])
-        Machtmp = orderjob(Machtmp, data, datatime, datamachine)
+        Machtmp = randomorder(sortgene, Machtmp, data, i, datatime, datamachine)
+        #Machtmp = orderjob(Machtmp, data, datatime, datamachine)
         genedata.append(selectdata(i, findtime(Machtmp)))
         mach100.append(Machtmp)
     for i in range(50):
         Machtmp = createmap(sonmac[i], data, sontime[i])
-        Machtmp = orderjob(Machtmp, data, datatime, datamachine)
+        Machtmp = randomorder(sortgeneson, Machtmp, data, i, datatime, datamachine)
+        #Machtmp = orderjob(Machtmp, data, datatime, datamachine)
         genedata.append(selectdata(i+50, findtime(Machtmp)))
         mach100.append(Machtmp)
     genedata = sorted(genedata, key=lambda selectdata: selectdata.time)
     #print(genedata)
-    return answer(genedata, mach100, gene, geneson)
+    return answer(genedata, mach100, gene, geneson, sortgene, sortgeneson)
 
 if __name__ == '__main__':
     data = pd.read_excel('data.xlsx',sheet_name= [0,1,2,3])
@@ -236,11 +300,14 @@ if __name__ == '__main__':
     runtime = 0 #execute time of geneAlgorithm
 
     #first time gene algorithm
-    gene = initial()
+    gene = initial() #select gene
+    sortgene = initial() #sort gene
     matenum = 50 * mate / 2
     motatenum = 50 * motate
-    sontmp = mating(matenum, gene)
-    geneson = motation(sontmp, 50*mate, gene)
+    sontmp = mating(matenum, gene) #select gene
+    geneson = motation(sontmp, 50*mate, gene) #select gene
+    sortsontmp = mating(matenum, sortgene) #sort gene
+    sortgeneson = motation(sortsontmp, 50*mate, sortgene) #sotr gene
 
     mommac = findmachine(gene, datamachine)
     momtime = findMachineTime(mommac, datatime, datamachine)
@@ -251,29 +318,33 @@ if __name__ == '__main__':
     genedata = []
     for i in range(50):
         Machtmp = createmap(mommac[i], data, momtime[i])
-        Machtmp = orderjob(Machtmp, data, datatime, datamachine)
+        Machtmp = randomorder(sortgene, Machtmp, data, i, datatime, datamachine)
+        #Machtmp = orderjob(Machtmp, data, datatime, datamachine)
         genedata.append(selectdata(i, findtime(Machtmp)))
         mach100.append(Machtmp)
     for i in range(50):
         Machtmp = createmap(sonmac[i], data, sontime[i])
-        Machtmp = orderjob(Machtmp, data, datatime, datamachine)
+        Machtmp = randomorder(sortgeneson, Machtmp, data, i, datatime, datamachine)
+        #Machtmp = orderjob(Machtmp, data, datatime, datamachine)
         genedata.append(selectdata(i+50, findtime(Machtmp)))
         mach100.append(Machtmp)
     genedata = sorted(genedata, key=lambda selectdata: selectdata.time)
     #print(genedata)
-    ans = geneAlgorithm(genedata, gene, geneson, datamachine, datatime,mate, motate)
+    ans = geneAlgorithm(genedata, gene, geneson, datamachine, datatime,mate, motate, sortgene, sortgeneson)
     #print(ans.genedata)
     #select(genedata, gene, geneson)
     runtime += 1
+    """
     for i in range(20):
-        ans = geneAlgorithm(ans.genedata, ans.gene, ans.geneson, datamachine, datatime,mate, motate)
+        ans = geneAlgorithm(ans.genedata, ans.gene, ans.geneson, datamachine, datatime,mate, motate, ans.sortgene, ans.sortgeneson)
         runtime += 1
     for i in range(20):
-        ans = geneAlgorithm(ans.genedata, ans.gene, ans.geneson, datamachine, datatime,0.7, 0.3)
+        ans = geneAlgorithm(ans.genedata, ans.gene, ans.geneson, datamachine, datatime,0.7, 0.3, ans.sortgene, ans.sortgeneson)
         runtime += 1
     for i in range(20):
-        ans = geneAlgorithm(ans.genedata, ans.gene, ans.geneson, datamachine, datatime,0.6, 0.4)
+        ans = geneAlgorithm(ans.genedata, ans.gene, ans.geneson, datamachine, datatime,0.6, 0.4, ans.sortgene, ans.sortgeneson)
         runtime += 1
+    """
     #print(ans)
     #print(mach100[0][0].assignjob)
     #print(ans.genedata[0].genenum)
